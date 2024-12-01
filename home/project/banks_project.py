@@ -29,6 +29,7 @@ def extract(url, table_attribs):
 
     # Clean the Market Cap column
     df['Market Cap(US$ Billion)'] = df['Market Cap(US$ Billion)'].str.replace('\n', '').astype(float)
+    log_progress("Market Cap column cleaned")
 
     # Rename columns to match the required attributes
     df.columns = table_attribs
