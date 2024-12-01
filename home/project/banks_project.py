@@ -3,6 +3,7 @@
 import datetime
 import pandas as pd
 import requests
+import numpy as np
 from bs4 import BeautifulSoup
 
 
@@ -28,20 +29,41 @@ def extract(url, table_attribs):
     df = pd.read_html(str(table))[0]
 
     # Clean the Market Cap column
-    df['Market Cap(US$ Billion)'] = df['Market Cap(US$ Billion)'].str.replace('\n', '').astype(float)
+    df['Market cap (US$ billion)'] = df['Market cap (US$ billion)'].replace('\n', '').astype(float)
 
     # Rename columns to match the required attributes
     df.columns = table_attribs
 
     log_progress("Data extraction complete. Initiating Transformation process")
     return df
+
+url = 'https://web.archive.org/web/20230908091635/https://en.wikipedia.org/wiki/List_of_largest_banks'
+table_attribs = ['Rank' , 'Name', 'MC_USD_Billion']
+df = extract(url, table_attribs)
+# print(df)
+
 def transform(df, csv_path):
     ''' This function accesses the CSV file for exchange rate
     information, and adds three columns to the data frame, each
     containing the transformed version of Market Cap column to
     respective currencies'''
-    log_progress("Data extraction complete. Initiating Transformation process")
+    exchange_rate_df = pd.read_csv(csv_path)
+
+    # Convert the contents to a dictionary
+    exchange_rate = dict(zip(exchange_rate_df.iloc[:, 0], exchange_rate_df.iloc[:, 1]))
+
+    # Add new columns to the DataFrame
+    df['MC_GBP_Billion'] = [np.round(x * exchange_rate['GBP'], 2) for x in df['MC_USD_Billion']]
+    df['MC_EUR_Billion'] = [np.round(x * exchange_rate['EUR'], 2) for x in df['MC_USD_Billion']]
+    df['MC_INR_Billion'] = [np.round(x * exchange_rate['INR'], 2) for x in df['MC_USD_Billion']]
+
+    log_progress("Transformation process complete")
     return df
+
+csv_path = 'exchange_rate.csv'
+transformed_df = transform(df, csv_path)
+print(transformed_df)
+
 def load_to_csv(df, output_path):
     ''' This function saves the final data frame as a CSV file in
     the provided path. Function returns nothing.'''
@@ -58,7 +80,3 @@ def run_query(query_statement, sql_connection):
 functions in the correct order to complete the project. Note that this
 portion is not inside any function.'''
 
-url = 'https://web.archive.org/web/20230908091635/https://en.wikipedia.org/wiki/List_of_largest_banks'
-table_attribs = ['Name', 'MC_USD_Billion']
-df = extract(url, table_attribs)
-print(df)
