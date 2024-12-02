@@ -5,6 +5,7 @@ import pandas as pd
 import requests
 import numpy as np
 from bs4 import BeautifulSoup
+import sqlite3
 
 
 
@@ -62,21 +63,53 @@ def transform(df, csv_path):
 
 csv_path = 'exchange_rate.csv'
 transformed_df = transform(df, csv_path)
-print(transformed_df)
+print(transformed_df.to_string())
 
 def load_to_csv(df, output_path):
     ''' This function saves the final data frame as a CSV file in
     the provided path. Function returns nothing.'''
+    df.to_csv(output_path, index=False)
     log_progress("Data saved to CSV file")
+
+output_path = 'banks_market_cap.csv'
+load_to_csv(transformed_df, output_path)
+
+
 def load_to_db(df, sql_connection, table_name):
     ''' This function saves the final data frame to a database
     table with the provided name. Function returns nothing.'''
+    df.to_sql(table_name, sql_connection, if_exists='replace', index=False)
     log_progress("Data loaded to Database as a table, Executing queries")
+
+# Initiate the connection to the SQLite3 database server
+db_connection = sqlite3.connect('Banks.db')
+
+# Call the function to load the transformed data frame to the SQL database
+load_to_db(transformed_df, db_connection, 'Largest_banks')
+
 def run_query(query_statement, sql_connection):
     ''' This function runs the query on the database table and
     prints the output on the terminal. Function returns nothing. '''
-    log_progress("Process Complete")
+    cursor = sql_connection.cursor()
+    cursor.execute(query_statement)
+    results = cursor.fetchall()
+    print(f"Query: {query_statement}")
+    for row in results:
+        print(row)
+    log_progress("Query executed and results printed")
 ''' Here, you define the required entities and call the relevant
 functions in the correct order to complete the project. Note that this
 portion is not inside any function.'''
+# Initiate the connection to the SQLite3 database server
+db_connection = sqlite3.connect('Banks.db')
+
+# Execute the queries
+query1 = "SELECT * FROM Largest_banks"
+run_query(query1, db_connection)
+
+query2 = "SELECT AVG(MC_GBP_Billion) FROM Largest_banks"
+run_query(query2, db_connection)
+
+query3 = "SELECT Name from Largest_banks LIMIT 5"
+run_query(query3, db_connection)
 
